@@ -1,0 +1,4 @@
+[submodule "vendor/ccapi"]
+	path = vendor/ccapi
+	url = https://github.com/crypto-chassis/ccapi.git
+	branch = master
