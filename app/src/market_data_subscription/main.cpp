@@ -52,6 +52,22 @@ void signal_handler(int signal)
 }
 
 int main(int argc, char** argv) {
+  if ((argc < 2) || ((0 == std::strcmp("-h", argv[1])) || (0 == std::strcmp("--help", argv[1])))) {
+    std::cout <<
+              "USAGE:\n\n"
+              "market_data_subscription binance linear_swap candlestick 60 -c BTCUSDT,ETHUSDT.\n\n"
+              "market_data_subscription coinbase linear_swap candlestick 60 -c BTCUSDT,ETHUSDT.\n\n";
+//              "  -c --color     Color output.\n";
+    exit(0);
+  }
+
+  std::string exchaneName = argv[1];
+
+  if (exchaneName != "coinbase" && exchaneName != "binance" )
+  {
+      std::cout << "not support exchange ("<< exchaneName << ")"<< std::endl;
+      exit(0);
+  }
   std::signal(SIGINT, signal_handler);
   std::signal(SIGKILL, signal_handler);
 
@@ -62,11 +78,11 @@ int main(int argc, char** argv) {
 //  Subscription subscription("coinbase", "BTC-USD", "MARKET_DEPTH");
 //  Subscription subscription("binance", "BTC-USD", "MARKET_DEPTH");
 // 1、orderbook
-  Subscription subscriptionMarketDepth("coinbase", "BTC-USD", "MARKET_DEPTH", "MARKET_DEPTH_MAX=20");
+  Subscription subscriptionMarketDepth(exchaneName, "BTC-USD", "MARKET_DEPTH", "MARKET_DEPTH_MAX=20");
 // 2、trade
 //  Subscription subscriptionTrade("coinbase", "BTC-USD", "TRADE");
 // 3、kline
-  Subscription subscriptionKline("coinbase", "BTC-USD", "TRADE", "CONFLATE_INTERVAL_MILLISECONDS=300&CONFLATE_GRACE_PERIOD_MILLISECONDS=0");
+  Subscription subscriptionKline(exchaneName, "BTC-USD", "TRADE", "CONFLATE_INTERVAL_MILLISECONDS=300&CONFLATE_GRACE_PERIOD_MILLISECONDS=0");
 
   std::vector<Subscription> subscriptionList;
   subscriptionList.push_back(subscriptionMarketDepth);
