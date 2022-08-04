@@ -6,11 +6,27 @@ class MyEventHandler : public EventHandler {
   bool processEvent(const Event& event, Session* session) override {
     if (event.getType() == Event::Type::SUBSCRIPTION_DATA) {
       for (const auto& message : event.getMessageList()) {
-        std::cout << std::string("Best bid and ask at ") + UtilTime::getISOTimestamp(message.getTime()) + " are:" << std::endl;
-        for (const auto& element : message.getElementList()) {
-          const std::map<std::string, std::string>& elementNameValueMap = element.getNameValueMap();
-          std::cout << "  " + toString(elementNameValueMap) << std::endl;
+        if (message.getType() == Message::Type::MARKET_DATA_EVENTS_MARKET_DEPTH)
+        {
+            std::cout << "msg type: " << Message::typeToString(message.getType()) << " " << std::string("Best bid and ask at ") + UtilTime::getISOTimestamp(message.getTime()) + " are:" << std::endl;
+            for (const auto& element : message.getElementList()) {
+                const std::map<std::string, std::string>& elementNameValueMap = element.getNameValueMap();
+                std::cout << "  " + toString(elementNameValueMap) << std::endl;
+            }
         }
+        else if (message.getType() == Message::Type::MARKET_DATA_EVENTS_TRADE)
+        {
+            std::cout << "msg type: " << Message::typeToString(message.getType()) << " " << std::string("trade at ") + UtilTime::getISOTimestamp(message.getTime()) + " are:" << std::endl;
+            for (const auto& element : message.getElementList()) {
+                const std::map<std::string, std::string>& elementNameValueMap = element.getNameValueMap();
+                std::cout << "  " + toString(elementNameValueMap) << std::endl;
+            }
+        }
+//        else if (message.getType() == Message::Type::MARKET_DATA_EVENTS_TRADE)
+//        {
+//
+//        }
+
       }
     }
     return true;
@@ -31,6 +47,7 @@ void signal_handler(int signal)
     if (signal == SIGINT || signal == SIGKILL)
     {
         stoped = true;
+        std::cout << "stoped" << stoped << std::endl;
     }
 }
 
@@ -42,20 +59,31 @@ int main(int argc, char** argv) {
   SessionConfigs sessionConfigs;
   MyEventHandler eventHandler;
   Session session(sessionOptions, sessionConfigs, &eventHandler);
-  Subscription subscription("coinbase", "BTC-USD", "MARKET_DEPTH");
+//  Subscription subscription("coinbase", "BTC-USD", "MARKET_DEPTH");
 //  Subscription subscription("binance", "BTC-USD", "MARKET_DEPTH");
+// 1、orderbook
+  Subscription subscriptionMarketDepth("coinbase", "BTC-USD", "MARKET_DEPTH", "MARKET_DEPTH_MAX=20");
+// 2、trade
+//  Subscription subscriptionTrade("coinbase", "BTC-USD", "TRADE");
+// 3、kline
+  Subscription subscriptionKline("coinbase", "BTC-USD", "TRADE", "CONFLATE_INTERVAL_MILLISECONDS=300&CONFLATE_GRACE_PERIOD_MILLISECONDS=0");
 
-  session.subscribe(subscription);
+  std::vector<Subscription> subscriptionList;
+  subscriptionList.push_back(subscriptionMarketDepth);
+//  subscriptionList.push_back(subscriptionTrade);
+  subscriptionList.push_back(subscriptionKline);
+  session.subscribe(subscriptionList);
 //  std::this_thread::sleep_for(std::chrono::seconds(10));
-
   while(true)
   {
-      if (stoped)
+//      std::cout << (stoped == true) << std::endl;
+      if (stoped == true)
       {
           break;
       }
+      std::this_thread::sleep_for(std::chrono::seconds(1));
   }
-
+  std::cout << "session.stop()" << std::endl;
   session.stop();
   std::cout << "Bye" << std::endl;
   return EXIT_SUCCESS;
