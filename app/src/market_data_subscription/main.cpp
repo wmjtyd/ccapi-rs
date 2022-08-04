@@ -23,14 +23,39 @@ using ::ccapi::SessionConfigs;
 using ::ccapi::SessionOptions;
 using ::ccapi::Subscription;
 using ::ccapi::toString;
+
+bool stoped = false;
+void signal_handler(int signal)
+{
+    std::cout << "signal_handler:" << signal << std::endl;
+    if (signal == SIGINT || signal == SIGKILL)
+    {
+        stoped = true;
+    }
+}
+
 int main(int argc, char** argv) {
+  std::signal(SIGINT, signal_handler);
+  std::signal(SIGKILL, signal_handler);
+
   SessionOptions sessionOptions;
   SessionConfigs sessionConfigs;
   MyEventHandler eventHandler;
   Session session(sessionOptions, sessionConfigs, &eventHandler);
   Subscription subscription("coinbase", "BTC-USD", "MARKET_DEPTH");
+//  Subscription subscription("binance", "BTC-USD", "MARKET_DEPTH");
+
   session.subscribe(subscription);
-  std::this_thread::sleep_for(std::chrono::seconds(10));
+//  std::this_thread::sleep_for(std::chrono::seconds(10));
+
+  while(true)
+  {
+      if (stoped)
+      {
+          break;
+      }
+  }
+
   session.stop();
   std::cout << "Bye" << std::endl;
   return EXIT_SUCCESS;
