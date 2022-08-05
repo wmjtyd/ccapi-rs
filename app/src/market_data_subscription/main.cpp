@@ -63,7 +63,11 @@ void signal_handler(int signal)
         std::cout << "stoped" << stoped << std::endl;
     }
 }
-
+/*
+./src/market_data_subscription/market_data_subscription -e coinbase -t market_depth -c [BTC-ETH,BTC-USDT]
+./src/market_data_subscription/market_data_subscription -e coinbase -t trade -c [BTC-ETH,BTC-USDT]
+./src/market_data_subscription/market_data_subscription -e coinbase -t candlestick -c [BTC-ETH,BTC-USDT] -i 60
+ */
 int main(int argc, char** argv) {
   std::vector<std::string> coinpairs;
   std::string exchangeName;
@@ -100,16 +104,19 @@ int main(int argc, char** argv) {
   std::signal(SIGKILL, signal_handler);
 
   gPub = zmq_pub_sub::Publish(ipcaddress);
-  int ret = gPub.connect();
-  if (ret != 0)
-  {
-      std::cout << "gPub.connect() failed ("<< ret << ")"<< std::endl;
-      exit(0);
-  }
+  printf("start to connect zmq ipc\n");
+//  int ret = gPub.connect();
+//  if (ret != 0)
+//  {
+//      std::cout << "gPub.connect() failed ("<< ret << ")"<< std::endl;
+//      exit(0);
+//  }
 
   SessionOptions sessionOptions;
   SessionConfigs sessionConfigs;
   MyEventHandler eventHandler;
+  printf("start to create session\n");
+  std::cout << "start to create session 2" << std::endl;
   Session session(sessionOptions, sessionConfigs, &eventHandler);
 //  Subscription subscription("coinbase", "BTC-USD", "MARKET_DEPTH");
 //  Subscription subscription("binance", "BTC-USD", "MARKET_DEPTH");
@@ -119,7 +126,7 @@ int main(int argc, char** argv) {
   {
       for (std::string& c : coinpairs)
       {
-          std::cout << "coinpairs:" << c << std::endl; //"BTC-USD"
+           //"BTC-USD"
           Subscription subscriptionMarketDepth(exchangeName, c, "MARKET_DEPTH", "MARKET_DEPTH_MAX=20");
           subscriptionList.push_back(subscriptionMarketDepth);
           printf("subscription: exchange(%s) type(%s) instrument(%s)\n", exchangeName.c_str(), "MARKET_DEPTH", c.c_str());
@@ -141,18 +148,20 @@ int main(int argc, char** argv) {
   else if ("candlestick" == eventType)
   {
 //      char* option = "CONFLATE_INTERVAL_MILLISECONDS=300&CONFLATE_GRACE_PERIOD_MILLISECONDS=0";
-      char* option = nullptr;
+      char option[300];
+      memset(option, 0, sizeof(option));
       sprintf(option, "CONFLATE_INTERVAL_MILLISECONDS=%d&CONFLATE_GRACE_PERIOD_MILLISECONDS=0", interval*1000);
 // 3、kline
       for (std::string& c : coinpairs)
       {
           Subscription subscriptionKline(exchangeName, c, "TRADE", option);
           subscriptionList.push_back(subscriptionKline);
-          printf("subscription: exchange(%s) type(%s) instrument(%s)\n", exchangeName.c_str(), "candlestick", c.c_str());
+          printf("subscription: exchange(%s) type(%s) instrument(%s) interval(%d)\n", exchangeName.c_str(), "candlestick", c.c_str(), interval);
       }
   }
 
   session.subscribe(subscriptionList);
+  printf("subscribe done\n");
 //  std::this_thread::sleep_for(std::chrono::seconds(10));
   while(true)
   {
