@@ -6,3 +6,7 @@
 	path = vendor/CLI11
 	url = https://github.com/CLIUtils/CLI11.git
 	branch = main
+[submodule "vendor/cpp_tools"]
+	path = vendor/cpp_tools
+	url = https://github.com/wmjtyd/cpp_tools.git
+	branch = main

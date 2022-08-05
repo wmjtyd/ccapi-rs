@@ -4,6 +4,8 @@
 #include "CLI/Formatter.hpp"
 #include "CLI/Config.hpp"
 
+#include "zmq_publish.h"
+zmq_pub_sub::Publish gPub("");
 namespace ccapi {
 Logger* Logger::logger = nullptr;  // This line is needed.
 class MyEventHandler : public EventHandler {
@@ -26,6 +28,12 @@ class MyEventHandler : public EventHandler {
                 const std::map<std::string, std::string>& elementNameValueMap = element.getNameValueMap();
                 std::cout << "  " + toString(elementNameValueMap) << std::endl;
             }
+        }
+
+        for (const auto& element : message.getElementList()) {
+            const std::map<std::string, std::string>& elementNameValueMap = element.getNameValueMap();
+//            std::cout << "  " + toString(elementNameValueMap) << std::endl;
+            gPub.send_message(toString(elementNameValueMap));
         }
 //        else if (message.getType() == Message::Type::MARKET_DATA_EVENTS_TRADE)
 //        {
@@ -60,6 +68,7 @@ int main(int argc, char** argv) {
   CLI::App app{"App description"};
   CLI::App* subcom = app.add_subcommand("name", "description");
 
+
   std::string filename = "default";
   app.add_option("-f,--file", filename, "A help string");
 
@@ -85,6 +94,14 @@ int main(int argc, char** argv) {
   }
   std::signal(SIGINT, signal_handler);
   std::signal(SIGKILL, signal_handler);
+
+  gPub = zmq_pub_sub::Publish("ipc:///tmp/pubsub1.ipc");
+  int ret = gPub.connect();
+  if (ret != 0)
+  {
+      std::cout << "gPub.connect() failed ("<< ret << ")"<< std::endl;
+      exit(0);
+  }
 
   SessionOptions sessionOptions;
   SessionConfigs sessionConfigs;
@@ -116,6 +133,7 @@ int main(int argc, char** argv) {
   }
   std::cout << "session.stop()" << std::endl;
   session.stop();
+//  gPub.disconnect();
   std::cout << "Bye" << std::endl;
   return EXIT_SUCCESS;
 }
