@@ -1,4 +1,9 @@
 #include "ccapi_cpp/ccapi_session.h"
+
+#include "CLI/App.hpp"
+#include "CLI/Formatter.hpp"
+#include "CLI/Config.hpp"
+
 namespace ccapi {
 Logger* Logger::logger = nullptr;  // This line is needed.
 class MyEventHandler : public EventHandler {
@@ -52,6 +57,16 @@ void signal_handler(int signal)
 }
 
 int main(int argc, char** argv) {
+  CLI::App app{"App description"};
+  CLI::App* subcom = app.add_subcommand("name", "description");
+
+  std::string filename = "default";
+  app.add_option("-f,--file", filename, "A help string");
+
+  subcom->add_option("-f,--file", filename, "A help string");
+
+  CLI11_PARSE(app, argc, argv);
+
   if ((argc < 2) || ((0 == std::strcmp("-h", argv[1])) || (0 == std::strcmp("--help", argv[1])))) {
     std::cout <<
               "USAGE:\n\n"

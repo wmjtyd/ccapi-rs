@@ -28,6 +28,10 @@ set(ADDITIONAL_LINK_LIBRARIES "")
 if (WIN32)
   set(ADDITIONAL_LINK_LIBRARIES ws2_32)
 endif()
+
+get_filename_component(VENDOR_DIR ../vendor ABSOLUTE)
+message(STATUS "VENDOR_DIR: ${VENDOR_DIR}")
+
 link_libraries(OpenSSL::Crypto OpenSSL::SSL ${ADDITIONAL_LINK_LIBRARIES})
 add_subdirectory(src/spot_market_making)
 add_subdirectory(src/single_order_execution)
