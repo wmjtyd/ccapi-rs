@@ -65,37 +65,41 @@ void signal_handler(int signal)
 }
 
 int main(int argc, char** argv) {
-  CLI::App app{"App description"};
-  CLI::App* subcom = app.add_subcommand("name", "description");
+  std::vector<std::string> coinpairs;
+  std::string exchangeName;
+  std::string eventType;
+  std::string ipcaddress = "ipc:///tmp/pubsub1.ipc";
+  int interval = 60;
+  CLI::App app{"app: market_data_subscription"};
+  CLI::App* subcom = app.add_subcommand("test", "description");
 
-
-  std::string filename = "default";
-  app.add_option("-f,--file", filename, "A help string");
-
-  subcom->add_option("-f,--file", filename, "A help string");
+  app.add_option("-e,--exchane", exchangeName, "exchane name");
+  app.add_option("-c,--coin", coinpairs, "coinpairs, -c [BTC-ETH, BTC-USDT]");
+  app.add_option("-t,--eventtype", eventType, "eventtype, such as, market_depth,trade, candlestick");
+  app.add_option("-i,--interval", interval, "candlestick interval, only for candlestick");
+  app.add_option("-p,--ipc", ipcaddress, "ipcaddress, such as ipc:///tmp/pubsub1.ipc");
 
   CLI11_PARSE(app, argc, argv);
-
-  if ((argc < 2) || ((0 == std::strcmp("-h", argv[1])) || (0 == std::strcmp("--help", argv[1])))) {
-    std::cout <<
-              "USAGE:\n\n"
-              "market_data_subscription binance linear_swap candlestick 60 -c BTCUSDT,ETHUSDT.\n\n"
-              "market_data_subscription coinbase linear_swap candlestick 60 -c BTCUSDT,ETHUSDT.\n\n";
+//
+//  if ((argc < 2) || ((0 == std::strcmp("-h", argv[1])) || (0 == std::strcmp("--help", argv[1])))) {
+//    std::cout <<
+//              "USAGE:\n\n"
+//              "market_data_subscription binance linear_swap candlestick 60 -c BTCUSDT,ETHUSDT.\n\n"
+//              "market_data_subscription coinbase linear_swap candlestick 60 -c BTCUSDT,ETHUSDT.\n\n";
 //              "  -c --color     Color output.\n";
-    exit(0);
-  }
+//    exit(0);
+//  }
 
-  std::string exchaneName = argv[1];
 
-  if (exchaneName != "coinbase" && exchaneName != "binance" )
+  if (exchangeName != "coinbase" && exchangeName != "binance" )
   {
-      std::cout << "not support exchange ("<< exchaneName << ")"<< std::endl;
+      std::cout << "not support exchange ("<< exchangeName << ")"<< std::endl;
       exit(0);
   }
   std::signal(SIGINT, signal_handler);
   std::signal(SIGKILL, signal_handler);
 
-  gPub = zmq_pub_sub::Publish("ipc:///tmp/pubsub1.ipc");
+  gPub = zmq_pub_sub::Publish(ipcaddress);
   int ret = gPub.connect();
   if (ret != 0)
   {
@@ -109,17 +113,45 @@ int main(int argc, char** argv) {
   Session session(sessionOptions, sessionConfigs, &eventHandler);
 //  Subscription subscription("coinbase", "BTC-USD", "MARKET_DEPTH");
 //  Subscription subscription("binance", "BTC-USD", "MARKET_DEPTH");
-// 1、orderbook
-  Subscription subscriptionMarketDepth(exchaneName, "BTC-USD", "MARKET_DEPTH", "MARKET_DEPTH_MAX=20");
-// 2、trade
-//  Subscription subscriptionTrade("coinbase", "BTC-USD", "TRADE");
-// 3、kline
-  Subscription subscriptionKline(exchaneName, "BTC-USD", "TRADE", "CONFLATE_INTERVAL_MILLISECONDS=300&CONFLATE_GRACE_PERIOD_MILLISECONDS=0");
-
   std::vector<Subscription> subscriptionList;
-  subscriptionList.push_back(subscriptionMarketDepth);
-//  subscriptionList.push_back(subscriptionTrade);
-  subscriptionList.push_back(subscriptionKline);
+// 1、orderbook
+  if ("market_depth" == eventType)
+  {
+      for (std::string& c : coinpairs)
+      {
+          std::cout << "coinpairs:" << c << std::endl; //"BTC-USD"
+          Subscription subscriptionMarketDepth(exchangeName, c, "MARKET_DEPTH", "MARKET_DEPTH_MAX=20");
+          subscriptionList.push_back(subscriptionMarketDepth);
+          printf("subscription: exchange(%s) type(%s) instrument(%s)\n", exchangeName.c_str(), "MARKET_DEPTH", c.c_str());
+      }
+
+  }
+  else if ("trade" == eventType)
+  {
+      // 2、trade
+      for (std::string& c : coinpairs)
+      {
+          //"BTC-USD"
+          Subscription subscriptionTrade(exchangeName, c, "TRADE");
+          subscriptionList.push_back(subscriptionTrade);
+          printf("subscription: exchange(%s) type(%s) instrument(%s)\n", exchangeName.c_str(), "TRADE", c.c_str());
+      }
+
+  }
+  else if ("candlestick" == eventType)
+  {
+//      char* option = "CONFLATE_INTERVAL_MILLISECONDS=300&CONFLATE_GRACE_PERIOD_MILLISECONDS=0";
+      char* option = nullptr;
+      sprintf(option, "CONFLATE_INTERVAL_MILLISECONDS=%d&CONFLATE_GRACE_PERIOD_MILLISECONDS=0", interval*1000);
+// 3、kline
+      for (std::string& c : coinpairs)
+      {
+          Subscription subscriptionKline(exchangeName, c, "TRADE", option);
+          subscriptionList.push_back(subscriptionKline);
+          printf("subscription: exchange(%s) type(%s) instrument(%s)\n", exchangeName.c_str(), "candlestick", c.c_str());
+      }
+  }
+
   session.subscribe(subscriptionList);
 //  std::this_thread::sleep_for(std::chrono::seconds(10));
   while(true)
