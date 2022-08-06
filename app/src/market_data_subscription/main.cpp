@@ -105,12 +105,13 @@ int main(int argc, char** argv) {
 
   gPub = zmq_pub_sub::Publish(ipcaddress);
   printf("start to connect zmq ipc\n");
-//  int ret = gPub.connect();
-//  if (ret != 0)
-//  {
-//      std::cout << "gPub.connect() failed ("<< ret << ")"<< std::endl;
-//      exit(0);
-//  }
+  int ret = gPub.connect();
+  if (ret != 0)
+  {
+     std::cout << "gPub.connect() failed ("<< ret << ")"<< std::endl;
+     exit(0);
+  }
+  printf("connected zmq ipc\n");
 
   SessionOptions sessionOptions;
   SessionConfigs sessionConfigs;
